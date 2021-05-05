@@ -8,3 +8,4 @@
 .pydevproject
 dist/
 build/
+src/cvpickle.egg-info/
