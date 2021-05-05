@@ -1,1 +1,2 @@
 include src/test_*.py
+include LICENSE
