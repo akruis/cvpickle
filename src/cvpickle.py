@@ -62,13 +62,10 @@ def _context_factory(cls, mapping):
     else:
         context = cls()
 
-    def set_vars():
-        for (modulename, qualname), value in mapping.items():
-            module = importlib.import_module(modulename)
-            cv = _getattribute(module, qualname)[0]
-            cv.set(value)
-            
-    context.run(set_vars)
+    for (modulename, qualname), value in mapping.items():
+        module = importlib.import_module(modulename)
+        cv = _getattribute(module, qualname)[0]
+        context.run(cv.set, value)
     return context
 
 

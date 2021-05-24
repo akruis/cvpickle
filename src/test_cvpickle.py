@@ -29,6 +29,8 @@ cvar1.set('cvar1-value')
 cvar2 = contextvars.ContextVar("cvar2")
 cvar2.set('cvar2-value')
 
+MODULE_NAME = __name__
+
 class Test(unittest.TestCase):
     cvar3 = contextvars.ContextVar("cvar3")
     cvar3.set('cvar3-value')
@@ -48,13 +50,13 @@ class Test(unittest.TestCase):
         self.assertEqual(len(args), 2)
         self.assertIs(args[0], None)
         self.assertDictEqual(args[1], {
-            ('test_cvpickle', 'Test.cvar3'): 'cvar3-value',
-            ('test_cvpickle', 'cvar1'): 'cvar1-value'})
+            (MODULE_NAME, 'Test.cvar3'): 'cvar3-value',
+            (MODULE_NAME, 'cvar1'): 'cvar1-value'})
 
     def test_context_factory(self):
         ctx = cvpickle._context_factory(contextvars.Context, {
-            ('test_cvpickle', 'Test.cvar3'): 'cvar3-new-value',
-            ('test_cvpickle', 'cvar1'): 'cvar1-new-value'})
+            (MODULE_NAME, 'Test.cvar3'): 'cvar3-new-value',
+            (MODULE_NAME, 'cvar1'): 'cvar1-new-value'})
         self.assertIsInstance(ctx, contextvars.Context)
         self.assertEqual(len(ctx), 2)
         self.assertEqual(ctx[cvar1], 'cvar1-new-value')
