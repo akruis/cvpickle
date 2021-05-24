@@ -4,5 +4,10 @@ Enable pickling of contextvars.Context objects.
 
 This code requires Python 3.7.1 or any later version.
 
-Sorry, the documentation is not yet complete. Please read the source.
-Pull request are highly appreciated.
+Documentation: https://cvpickle.readthedocs.io/
+
+Bug Tracker: https://github.com/akruis/cvpickle/issues
+
+## Changelog
+
+ * 0.0.1: Initial release

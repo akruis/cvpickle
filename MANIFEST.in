@@ -1,2 +1,2 @@
 include src/test_*.py
-include LICENSE
+include docs/conf.py docs/*.rst
