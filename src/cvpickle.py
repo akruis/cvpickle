@@ -16,16 +16,9 @@
 # 51 Franklin Street, Suite 500, Boston, MA  02110-1335  USA.
 
 '''
-cvpickle --- make contextvar.Context picklable
+:mod:`cvpickle` --- make :class:`contextvars.Context` picklable
 
-A minimal example:
->>> import cvpickle
->>> import contextvars
-...
->>> my_context_var = contextvars.ContextVar("my_context_var")
->>> cvpickle.register_contextvar(my_context_var, __name__)
-
-Pickling of context objects is not possible by default for two reasons, given in
+Pickling of :class:`~contextvars.Context` objects is not possible by default for two reasons, given in
 https://www.python.org/dev/peps/pep-0567/#making-context-objects-picklable:
 
    1. ContextVar objects do not have __module__ and __qualname__ attributes,
@@ -33,12 +26,21 @@ https://www.python.org/dev/peps/pep-0567/#making-context-objects-picklable:
    2. Not all context variables refer to picklable objects. Making a ContextVar
       picklable must be an opt-in.
 
-The module "cvpickle" provides a reducer (class ContextReducer) for context objects.
+The module :mod:`cvpickle` provides a reducer (class :class:`ContextReducer`) for context objects.
 You have to register a ContextVar with the reducer to get it pickled.
 
-For convenience, the module provides a global ContextReducer object in
-cvpickle.default_context_reducer and ContextVar (un-)registration functions
-cvpickle.register_contextvar() and cvpickle.unregister_contextvar()
+For convenience, the module provides a global :class:`ContextReducer` object in
+:data:`cvpickle.global_context_reducer` and ContextVar (un-)registration functions
+:func:`cvpickle.register_contextvar` and :func:`cvpickle.deregister_contextvar`
+
+A minimal example:
+
+    >>> import cvpickle
+    >>> import contextvars
+    >>> 
+    >>> my_context_var = contextvars.ContextVar("my_context_var")
+    >>> cvpickle.register_contextvar(my_context_var, __name__)
+
 '''
 
 import contextvars
@@ -71,18 +73,28 @@ def _context_factory(cls, mapping):
 
 
 class ContextReducer:
-    """A ContestReducer is a reduction function for a contextvars.Context object.
+    """A *ContextReducer* object is a "reduction" function for a :class:`~contextvars.Context` object.
+    
+    An *ContextReducer* object knows which context variables can be pickled.
     """
 
     def __init__(self, *, auto_register=False, factory_is_copy_context=False):
         # contextvars.ContextVar is hashable, but it is not possible to create a weak reference
         # to a ContextVar (as of Python 3.7.1). Therefore we use a regular dictionary instead of
-        # weakref.WeakKeyDictionary(). That's no problem, because deleting a ContextVar always leaks
-        # references 
+        # weakref.WeakKeyDictionary(). That's no problem, because deleting a ContextVar leaks
+        # references anyway
         self.picklable_contextvars = {}
+
+        #: If set to :data:`True`, call :func:`copyreg.pickle` to declare this *ContextReducer* as
+        #: "reduction" function for :class:`~contextvars.Context` objects, when the
+        #: :meth:`register_contextvar` is called for the first time.
         self.auto_register = auto_register
+
+        #: If set to :data:`True`, use :func:`contextvars.copy_context` to create a new 
+        #: :class:`~contextvars.Context` object upon unpickling. This way the unpickled
+        #: context variables are added to the existing context variables.
         self.factory_is_copy_context = factory_is_copy_context
-    
+
     def __call__(self, context):
         """Reduce a contextvars.Context object
         """
@@ -104,11 +116,24 @@ class ContextReducer:
         return _context_factory, (cls, cvars)
 
     def register_contextvar(self, contextvar, module, qualname=None, *, validate=True):
-        """Register a context variable
+        """Register *contextvar* with this :class:`ContextReducer`
+        
+        Declare, that the context variable *contextvar* can be pickled.
+        
+        :param contextvar: a context variable
+        :type contextvar: :class:`~contextvars.ContextVar`
+        :param module: the module object or the module name, where *contextvar* is declared
+        :type module: :class:`~types.ModuleType` or :class:`str`
+        :param qualname: the qualified name of *contextvar* in *module*. If unset, *contextvar.name* is used.
+        :type qualname: :class:`str`
+        :param validate: if true, check that *contextvar* can be accessed as *module.qualname*.
+        :type validate: :class:`boolean`
+        :raises TypeError: if *contextvar* is not an instance of :class:`~contextvars.ContextVar`
+        :raises ValueError: if *contextvar* is not *module.qualname*.
         """
         if not isinstance(contextvar, contextvars.ContextVar):
             raise TypeError('Argument 1 must be a ContextVar object not {}'.format(type(contextvar).__name__))
-        
+
         modulename = module
         is_module = isinstance(module, types.ModuleType)
         if is_module:
@@ -133,16 +158,39 @@ class ContextReducer:
             else:
                 pickle_flags(PICKLEFLAGS_PICKLE_CONTEXT, PICKLEFLAGS_PICKLE_CONTEXT)
                 pickle_flags_default(PICKLEFLAGS_PICKLE_CONTEXT, PICKLEFLAGS_PICKLE_CONTEXT)
-    
-    def unregister_contextvar(self, contextvar):
-        """Unregister a context variable
+
+    def deregister_contextvar(self, contextvar):
+        """Deregister *contextvar* from this :class:`ContextReducer`
+
+        Declare, that the context variable *contextvar* can't be pickled.
+
+        :param contextvar: a context variable
+        :type contextvar: :class:`~contextvars.ContextVar`
+        :raises KeyError: if *contextvar* hasn't been registered.
         """
         del self.picklable_contextvars[contextvar]
-        
-default_context_reducer = ContextReducer(auto_register=True, factory_is_copy_context=True)
+
+#: A global :class:`ContextReducer` object.
+#:
+#: The attributes are set as follows
+#:
+#:  * :attr:`~ContextReducer.auto_register`: :data:`True`
+#:  * :attr:`~ContextReducer.factory_is_copy_context`: :data:`True`
+#:
+#: :meta hide-value:
+#:
+global_context_reducer = ContextReducer(auto_register=True, factory_is_copy_context=True)
 
 def register_contextvar(contextvar, module, qualname=None, *, validate=True):
-    return default_context_reducer.register_contextvar(contextvar, module, qualname, validate=validate)
+    """Register *contextvar* with :data:`global_context_reducer`
 
-def unregister_contextvar(contextvar):
-    return default_context_reducer.unregister_contextvar(contextvar)
+    See :meth:`ContextReducer.register_contextvar`.
+    """
+    return global_context_reducer.register_contextvar(contextvar, module, qualname, validate=validate)
+
+def deregister_contextvar(contextvar):
+    """Deregister *contextvar* from :data:`global_context_reducer`
+
+    See :meth:`ContextReducer.deregister_contextvar`.
+    """
+    return global_context_reducer.deregister_contextvar(contextvar)

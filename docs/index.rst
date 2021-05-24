@@ -8,6 +8,7 @@ Welcome to cvpickle's documentation!
 
 .. automodule:: cvpickle
    :members:
+   :member-order: bysource
 
 Indices and tables
 ==================

@@ -29,6 +29,7 @@ author = 'Anselm Kruis'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,3 +70,6 @@ html_static_path = ['_static']
 # If the class has no __init__ method or if the __init__ method’s docstring is
 # empty, but the class has a __new__ method’s docstring, it is used instead.
 autoclass_content = "both"
+
+# see https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#module-sphinx.ext.intersphinx
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
